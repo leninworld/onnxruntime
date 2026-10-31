@@ -1,0 +1,47 @@
+name: Web file-origin full input pricing
+on:
+  push:
+    branches: [price-web-file-origin-33735]
+    paths: [.github/workflows/price-web-file-origin-33735.yml, price.py, locks.json]
+permissions:
+  contents: read
+concurrency:
+  group: price-web-file-origin-33735
+  cancel-in-progress: false
+jobs:
+  price:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.x'
+          package-manager-cache: false
+      - name: Recheck execution storage and memory before sizing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, platform, shutil, subprocess
+          workspace = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          docker = json.loads(subprocess.check_output(['docker', 'info', '--format', '{"root":{{json .DockerRootDir}},"memory":{{.MemTotal}},"cpus":{{.NCPU}}}'], timeout=10))
+          root = pathlib.Path(docker['root'])
+          memory = {a: int(b.split()[0])*1024 for a,b in (line.split(':',1) for line in pathlib.Path('/proc/meminfo').read_text().splitlines()) if b.split()[1:] == ['kB']}
+          disk = shutil.disk_usage(workspace)
+          docker_disk = shutil.disk_usage(root)
+          filesystem = subprocess.check_output(['stat','-f','-c','%T',str(workspace)],timeout=10).decode().strip()
+          print(json.dumps({'workspace_free': disk.free,'docker_free': docker_disk.free,'shared_device':workspace.stat().st_dev == root.stat().st_dev,'docker_memory':docker['memory'],'available_memory':memory['MemAvailable'],'cpus':docker['cpus'],'filesystem':filesystem}))
+          assert platform.machine() in ('arm64','aarch64') and filesystem not in ('tmpfs','ramfs')
+          assert min(disk.free,docker_disk.free) >= 24*1024**3
+          assert min(docker['memory'],memory['MemAvailable']) >= 10*1024**3 and docker['cpus'] >= 4
+          PY
+      - name: Size exact public inputs without installing or running project code
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 1500s python3 price.py
