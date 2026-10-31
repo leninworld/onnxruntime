@@ -154,6 +154,17 @@ try:
     source = P/'source'
     assert command(['git', '-C', str(source), 'rev-parse', 'HEAD'], 10).decode().strip() == 'f5ff8ca8f1ff21141d4621b182b5750ea1e3a63a'
     assert command(['git', '-C', str(source), 'status', '--porcelain'], 10) == b''
+    doc_inputs = json.loads((P/'required-doc-inputs.json').read_text())
+    link = command(['git','-C',str(source),'ls-tree','HEAD','cmake/external/onnx'], 10).decode()
+    assert '160000 commit ' + doc_inputs['onnx_gitlink'] + '\tcmake/external/onnx' in link
+    header = source/'cmake/external/onnx/onnx/defs/operator_sets.h'
+    assert not header.exists()
+    header.parent.mkdir(parents=True)
+    with header.open('xb') as destination:
+        destination.write((P/'ONNX-operator_sets.h').read_bytes())
+    for item in doc_inputs['files']:
+        data = (source/item['path']).read_bytes()
+        assert len(data) == item['bytes'] and hashlib.sha256(data).hexdigest() == item['sha256'], 'DOC_SOURCE_IDENTITY_MISMATCH'
     expected = json.loads((P/'expected-source-hashes.json').read_text())
     assert hashlib.sha256((P/'I2.patch').read_bytes()).hexdigest() == expected['patch_sha256']
     command(['git', '-C', str(source), 'apply', '--check', str(P/'I2.patch')], 10)

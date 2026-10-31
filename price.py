@@ -221,7 +221,7 @@ def main():
         changed = []
         for item in delta["files"]:
             changed.extend([item["filename"]] + ([item["previous_filename"]] if "previous_filename" in item else []))
-        affected = [p for p in changed if p.startswith(("js/", ".github/", "tools/ci_build/")) or p in ("AGENTS.md", "LICENSE", "ThirdPartyNotices.txt", ".gitmodules")]
+        affected = [p for p in changed if p.startswith(("js/", ".github/", "tools/ci_build/")) or p in ("AGENTS.md", "LICENSE", "ThirdPartyNotices.txt", ".gitmodules", "cmake/external/onnx", "onnxruntime/core/providers/js/js_execution_provider.cc", "onnxruntime/contrib_ops/js/js_contrib_kernels.cc")]
         assert not affected, "AFFECTED_SOURCE_CLOSURE_CHANGED"
         RESULT["main_delta"] = {"current": current_sha, "files": changed, "complete": True,
                                 "validation_base": MAIN, "latest_native_wasm_tested": False}
@@ -308,7 +308,9 @@ def main():
         RESULT["onnx_test_archives"][version] = dict(zip_price(path, node_prefix="/onnx/backend/test/data/node/"),
                                                      compressed_bytes=size, sha256=hashlib.sha256(path.read_bytes()).hexdigest())
     RESULT["status"] = "PRICED_NOT_EXECUTION_ADMISSION"
+    RESULT["documentation_inputs"] = json.loads((ROOT / "required-doc-inputs.json").read_text())
     RESULT["closure_expansion_bytes"] = (
+        RESULT["documentation_inputs"]["total_bytes"] * 2 +
         sum(RESULT["npm"]["unpacked_per_lock"].values()) * 2
         + sum(x["expanded_bytes"] for x in RESULT["browsers"].values())
         + sum(x["expanded_bytes"] for x in RESULT["onnx_test_archives"].values())

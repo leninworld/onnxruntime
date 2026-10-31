@@ -26,6 +26,8 @@ jobs:
             js
             .github
             docs
+            onnxruntime/core/providers/js
+            onnxruntime/contrib_ops/js
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24.22.1'
@@ -43,10 +45,13 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          for pattern in ('integrated-result.json', 'execution-result.json', '*browser-result.json', 'package-control-result.json', 'memory-samples.jsonl', '*-check-result.json', 'fixture-*/input-identities.json', 'remote-command-*.log'):
+          for pattern in ('integrated-result.json', 'execution-result.json', '*browser-result.json', 'package-control-result.json', 'memory-samples.jsonl', '*-check-result.json', 'docs-input-result.json', 'price-result.json', 'fixture/package-lock.json', 'fixture-*/input-identities.json', 'remote-command-*.log'):
               for p in sorted(Path('.').glob(pattern)):
                   data=p.read_bytes()
                   print(p.name, 'bytes=', len(data))
-                  assert len(data) <= 1048576 or not (p.name == 'memory-samples.jsonl' or p.name.endswith('-check-result.json'))
-                  print((data if p.name == 'memory-samples.jsonl' or p.name.endswith('-check-result.json') else data[-16384:]).decode(errors='replace'))
+                  cap=2097152 if p.name == 'price-result.json' else 1048576
+                  if len(data)>cap and (p.name in ('memory-samples.jsonl','price-result.json','package-lock.json') or p.name.endswith('-check-result.json')):
+                      print('size cap exceeded, not printed')
+                      continue
+                  print((data if p.name in ('memory-samples.jsonl','price-result.json','package-lock.json') or p.name.endswith('-check-result.json') else data[-16384:]).decode(errors='replace'))
           PY

@@ -1,0 +1,29 @@
+{
+  "parent_commit": "f5ff8ca8f1ff21141d4621b182b5750ea1e3a63a",
+  "onnx_gitlink": "e1ac8e74b620bbdc7ba07f0440806bd93f651a28",
+  "files": [
+    {
+      "path": "onnxruntime/core/providers/js/js_execution_provider.cc",
+      "git_blob": "46bf029a5a71fa9306a15d43b6db55b88972a462",
+      "sha256": "0bed64a9980b30296ea97e0bc076f6e2b85c667da5d7a362f75abc287d2c3e6a",
+      "bytes": 65897,
+      "source": "Exact parent repository f5ff8ca8 Git blob; materialized through sparse checkout"
+    },
+    {
+      "path": "onnxruntime/contrib_ops/js/js_contrib_kernels.cc",
+      "git_blob": "36a6f9bd87013946945a02c62fb239841f58569f",
+      "sha256": "3ce284545da3c14f6e0fde3dcbe37a03c790f462cb0a018e0216230ce396fde9",
+      "bytes": 5435,
+      "source": "Exact parent repository f5ff8ca8 Git blob; materialized through sparse checkout"
+    },
+    {
+      "path": "cmake/external/onnx/onnx/defs/operator_sets.h",
+      "git_blob": "77184a311028f13c0d18313da42fa4159fb59395",
+      "sha256": "99b4de7e8bcfa4bdf2f0752928eed85efbd2b28447189e0717dca1219f7e6c38",
+      "bytes": 100699,
+      "source": "Unmodified exact header from ONNX gitlink e1ac8e74b620bbdc7ba07f0440806bd93f651a28; no submodule initialization/native build claim"
+    }
+  ],
+  "total_bytes": 172031,
+  "license": "ONNX header retained verbatim with ONNX-LICENSE from same commit; native registration files remain in parent checkout."
+}

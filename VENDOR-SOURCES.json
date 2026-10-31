@@ -14,5 +14,14 @@
     "defaultAction": "SCMP_ACT_ERRNO"
   },
   "license": "Verbatim Playwright v1.56.1 license in PLAYWRIGHT-LICENSE; profile copied without modification.",
-  "scope": "Only synthetic/public tests; no private credentials or Mac files."
+  "scope": "Only synthetic/public tests; no private credentials or Mac files.",
+  "onnx_documentation_header": {
+    "repository": "https://github.com/onnx/onnx",
+    "commit": "e1ac8e74b620bbdc7ba07f0440806bd93f651a28",
+    "path": "onnx/defs/operator_sets.h",
+    "blob": "77184a311028f13c0d18313da42fa4159fb59395",
+    "sha256": "99b4de7e8bcfa4bdf2f0752928eed85efbd2b28447189e0717dca1219f7e6c38",
+    "license": "Verbatim ONNX-LICENSE from the same commit; header copyright preserved.",
+    "use": "Exact text input at original path for documentation generation only; not a submodule initialization or native build."
+  }
 }

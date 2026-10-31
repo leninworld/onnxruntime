@@ -37,7 +37,7 @@ async function run(name,args,cwd=S,seconds=600,expectedFailure=false) {
   } catch(e) {await stop(proc);throw e;}
   finally {fs.closeSync(fd);}
   const text=fs.readFileSync(log,'utf8');
-  result.steps.push({name,args,cwd,exit:proc.exitCode,signal:proc.signalCode,seconds:(Date.now()-clock)/1000,logSha256:sha(text)});save();
+  result.steps.push({name,args,cwd,exit:proc.exitCode,signal:proc.signalCode,seconds:(Date.now()-clock)/1000,logSha256:sha(text),...((proc.exitCode!==0 && !expectedFailure)?{failureLogTail:text.slice(-16384).replace(/([?&](?:token|access_token|key)=)[^&\s]*/gi,'$1[REDACTED]')}:{}),...(['common-tests','common-float16-tests','full-wasm-default-suite','full-wasm-proxy-suite','package-consumption-controls'].includes(name)?{testLogTail:text.slice(-4096).replace(/([?&](?:token|access_token|key)=)[^&\s]*/gi,'$1[REDACTED]')}:{})});save();
   if(expectedFailure) assert(proc.exitCode!==0 && /Invalid (?:base )?URL/.test(text) && text.includes('resolveScriptSrc'),'MISSING_BASELINE_URL_REGRESSION');
   else assert.equal(proc.exitCode,0,'STEP_FAILED_'+name);
 }
@@ -65,6 +65,9 @@ async function fixture(lane,bundle) {
 }
 try {
   assert.notEqual(process.getuid(),0,'NONROOT_BROWSER_REQUIRED');
+  const docInputs=JSON.parse(fs.readFileSync(P+'/required-doc-inputs.json'));
+  for(const item of docInputs.files) assert.equal(sha(fs.readFileSync(path.join(S,item.path))),item.sha256,'DOC_SOURCE_IDENTITY_MISMATCH');
+  fs.writeFileSync(P+'/docs-input-result.json',JSON.stringify({verified:true,inputs:docInputs},null,2),{flag:'wx'});
   await run('node-identity',['node','--version'],S,10);
   await run('npm-identity',['npm','--version'],S,10);
   await run('root-npm-ci',['npm','ci'],S+'/js',600);
