@@ -1,0 +1,11 @@
+{
+  "description": "Unmodified copy of a microsoft/onnxruntime CI build artifact (run 41131499960, commit f5ff8ca8f1ff21141d4621b182b5750ea1e3a63a), relayed for validation of a proposed fix for issue 33735. This relay is not an official release and is not published or endorsed by Microsoft.",
+  "source_repository": "https://github.com/microsoft/onnxruntime",
+  "source_commit": "f5ff8ca8f1ff21141d4621b182b5750ea1e3a63a",
+  "source_run": "https://github.com/microsoft/onnxruntime/actions/runs/41131499960",
+  "artifact_id": 13020595908,
+  "sha256": "f2469ee4f02eef820f57e7779f2143d167412785fbcf125a5c47717bbe005ffe",
+  "archive_bytes": 22784547,
+  "notices": "LICENSE and ThirdPartyNotices.txt copied verbatim from the source commit; archive contains the eight expected WebAssembly and Emscripten glue files.",
+  "usage": "Validation input only; no production patch or workflow in this branch."
+}
