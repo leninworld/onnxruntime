@@ -1,0 +1,74 @@
+name: Web file-origin validation capacity
+
+on:
+  push:
+    branches: [capacity-web-file-origin-33735]
+    paths: [.github/workflows/capacity-web-file-origin-33735.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capacity-web-file-origin-33735
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 3
+    steps:
+      - name: Inspect capacity without checkout or installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import platform
+          import shutil
+          import subprocess
+          import sys
+
+          workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"])
+          workspace.mkdir(parents=True, exist_ok=True)
+          fs_type = subprocess.run(
+              ["stat", "-f", "-c", "%T", str(workspace)],
+              capture_output=True, text=True, check=True, timeout=10,
+          ).stdout.strip()
+          docker = json.loads(subprocess.run(
+              ["docker", "info", "--format",
+               '{"memory":{{.MemTotal}},"cpus":{{.NCPU}}}'],
+              capture_output=True, text=True, check=True, timeout=10,
+          ).stdout)
+          memory = {}
+          for line in pathlib.Path("/proc/meminfo").read_text().splitlines():
+              key, value = line.split(":", 1)
+              fields = value.split()
+              memory[key] = int(fields[0]) * (1024 if fields[1:] == ["kB"] else 1)
+          disk = shutil.disk_usage(workspace)
+          gib = 1024 ** 3
+          conditions = {
+              "linux_arm64": platform.system() == "Linux"
+                  and platform.machine() in ("aarch64", "arm64"),
+              "disk_not_tmpfs": fs_type not in ("tmpfs", "ramfs"),
+              "base_disk_floor": disk.free >= 24 * gib,
+              "docker_memory_floor": docker["memory"] >= 10 * gib,
+              "available_memory_floor": memory.get("MemAvailable", 0) >= 10 * gib,
+              "four_cpus": docker["cpus"] >= 4,
+          }
+          print(json.dumps({
+              "kind": "public_ephemeral_runner_capacity",
+              "architecture": platform.machine(),
+              "filesystem_type": fs_type,
+              "disk_total_bytes": disk.total,
+              "disk_free_bytes": disk.free,
+              "docker_memory_bytes": docker["memory"],
+              "docker_cpus": docker["cpus"],
+              "memory_available_bytes": memory.get("MemAvailable", 0),
+              "conditions": conditions,
+              "execution_admitted": False,
+              "remaining_gate": "Complete manifest expansion and all technical conditions",
+          }, indent=2))
+          sys.exit(0 if all(conditions.values()) else 3)
+          PY
