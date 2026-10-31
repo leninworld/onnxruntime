@@ -4,11 +4,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const [fixtureDir, modelPath, wasmPath, bundlePath] = process.argv.slice(2);
-assert(fixtureDir && modelPath && wasmPath);
+const [fixtureDir, modelPath, bundlePath] = process.argv.slice(2);
+assert(fixtureDir && modelPath);
 const model = fs.readFileSync(modelPath);
-const wasm = fs.readFileSync(wasmPath);
-assert(model.length < 1024 * 1024 && wasm.length < 64 * 1024 * 1024);
+let entry=bundlePath && path.resolve(bundlePath);
+if(!entry) {
+  const packageRoot=path.join(fixtureDir,'node_modules/onnxruntime-web');
+  const pkg=JSON.parse(fs.readFileSync(path.join(packageRoot,'package.json')));
+  const root=typeof pkg.exports==='object' && Object.keys(pkg.exports).some(n=>n.startsWith('.')) ? pkg.exports['.'] : pkg.exports;
+  const resolve=(value,conditions)=>{
+    if(typeof value==='string') return value;
+    assert(value && !Array.isArray(value),'Unsupported package entry contract');
+    for(const [key,next] of Object.entries(value)) if(conditions.has(key)) {
+      const found=resolve(next,conditions);if(found) return found;
+    }
+  };
+  const prod=resolve(root,new Set(['browser','import','module','production','default']));
+  const dev=resolve(root,new Set(['browser','import','module','development','default']));
+  assert(prod && prod===dev && prod.startsWith('./'),'Ambiguous browser import entry');
+  entry=path.resolve(packageRoot,prod);
+  assert(entry.startsWith(path.resolve(packageRoot)+path.sep));
+}
+const bundleBytes=fs.readFileSync(entry);
+const referenced=[...new Set(bundleBytes.toString('utf8').match(/ort-wasm-simd-threaded(?:\.[a-z0-9_-]+)?\.wasm/g)??[])];
+assert.equal(referenced.length,1,'STOP_NO_RETRY: ambiguous bundle WASM contract');
+const wasmPath=path.join(path.dirname(entry),referenced[0]);
+const gluePath=wasmPath.replace(/\.wasm$/,'.mjs');
+assert(fs.statSync(wasmPath).isFile() && fs.statSync(gluePath).isFile());
+const wasm=fs.readFileSync(wasmPath);
+assert(model.length<1024*1024 && wasm.length<64*1024*1024);
+assert(WebAssembly.validate(wasm),'STOP_NO_RETRY: invalid matching WASM');
+const pairing={resolvedEntry:entry,referencedName:referenced[0],wasmFile:wasmPath,glueFile:gluePath,bundleSha256:crypto.createHash('sha256').update(bundleBytes).digest('hex'),wasmSha256:crypto.createHash('sha256').update(wasm).digest('hex'),glueSha256:crypto.createHash('sha256').update(fs.readFileSync(gluePath)).digest('hex'),wasmValidated:true};
 const put = (name, content) => {
   const target = path.join(fixtureDir, name);
   assert(!fs.existsSync(target));
@@ -52,4 +78,4 @@ if (bundlePath) {
   alias = {'onnxruntime-web': local};
 }
 put('vite.config.mjs', `import {defineConfig} from 'vite';\nimport {viteSingleFile} from 'vite-plugin-singlefile';\nexport default defineConfig({base:'./',plugins:[viteSingleFile()],resolve:{alias:${JSON.stringify(alias)}},build:{target:'esnext'},server:{host:'127.0.0.1',port:4174,strictPort:true}});\n`);
-put('input-identities.json', JSON.stringify({model: {path:modelPath, bytes:model.length, sha256:crypto.createHash('sha256').update(model).digest('hex')},wasm: {path:wasmPath, bytes:wasm.length, sha256:crypto.createHash('sha256').update(wasm).digest('hex')},bundle:bundlePath ? {path:bundlePath,sha256:crypto.createHash('sha256').update(fs.readFileSync(bundlePath)).digest('hex')} : {published:'onnxruntime-web@1.30.0'}},null,2));
+put('input-identities.json',JSON.stringify({model:{path:modelPath,bytes:model.length,sha256:crypto.createHash('sha256').update(model).digest('hex')},pairing},null,2));

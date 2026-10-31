@@ -1,0 +1,26 @@
+{
+  "step_map": {
+    "root-npm-ci/common-npm-ci/common-tests/common-float16/web-npm-ci": "linux-web-init-and-check exact corresponding steps",
+    "candidate-web-prebuild": "Linux run TypeScript type check; nowincludes committed regression",
+    "candidate-root-lint": "Linux run ESLint npm run lint",
+    "candidate-format": "Linux Format code npm run format; source hash before/after matchescheckunformatted without Git",
+    "common-typedoc": "Linux TypeDocValidation --emit none --treatWarningsAsErrors; --no-install avoids hiddenfetch",
+    "web-generate-docs": "Linux Generatingdocuments +sourceunchangedcheck",
+    "baseline/candidate-production-build": "Actual official build.ts all productionoutputs+bundlevalidation, baseline directnode becauseexpectednewregression fails",
+    "full-wasm-default-suite": "Windows browserALLbackendstep adaptedCPUWASMonly, npm test -- -e=chrome -b=wasm",
+    "full-wasm-proxy-suite": "Windows ReleaseWebAssemblyproxy npm test -- --wasm.proxy -b=wasm -e=chrome",
+    "package-consumption-controls": "ActualupstreamrunKarma+e2ekarma.conf.js forVite/WebpackESM/UMD xwithout/withSharedArrayBuffer",
+    "fixtures": "Additional realFirefox/Chromium3lanefile/HTTP/dev regressions; notclaimedupstreamCIstep"
+  },
+  "default_mode": "test-runner-cli-args.ts defaults args._empty to suite0; runner suite0 setsunittest=true alongsideoperators/models",
+  "web_launcher": "-e=chrome ->ChromeTest; bundleMode=dev&&!debug adds--headless=new; args.noSandboxonlywhenexplicitCLIflag(notpassed)",
+  "e2e_launcher": "Chrome_headless baseChrome flags--headless,--ignore-gpu-blocklist,--gpu-vendor-id=0x10de; SharedArrayBuffervariantadds--enable-features=SharedArrayBuffer. No --no-sandbox inactualconfiguration. CPUWASMmodels only.",
+  "not_run": [
+    "GPU/WebGL/platformjobs",
+    "Windows-specificexportlauncher",
+    "Rollup",
+    "Parcel",
+    "stockFirefox"
+  ],
+  "rules": "Ifpairingfailsparkandstaticreadpublishedpackage; ifpairingpassesbutreporterHTTPfails, no thirdrunwithoutsource-proven cause; ifdevfailsHTTPpasses inspectdocumentedoptimizeDeps guidance, no silentconfigchange"
+}

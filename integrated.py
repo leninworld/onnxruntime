@@ -18,11 +18,12 @@ GIB = 1024**3
 RESULT = {'status': 'RUNNING', 'product_execution_started': False}
 OWN_CONTAINER = None
 COMMAND_COUNT = 0
+LAST_MEMORY_SAMPLE = 0
 
 
 def command(args, seconds, cap=16*1024**2, job_metadata=False):
     import selectors
-    global COMMAND_COUNT
+    global COMMAND_COUNT, LAST_MEMORY_SAMPLE
     COMMAND_COUNT += 1
     log_path = P / ('remote-command-%03d.log' % COMMAND_COUNT)
     assert not log_path.exists()
@@ -42,15 +43,24 @@ def command(args, seconds, cap=16*1024**2, job_metadata=False):
             assert shutil.disk_usage(P).free >= 12*GIB, 'RUNTIME_DISK_PRESSURE'
             available = int(re.search(r'^MemAvailable:\s+(\d+)', Path('/proc/meminfo').read_text(), re.M)[1])*1024
             assert available >= 2*GIB, 'HOST_MEMORY_PRESSURE'
-            if OWN_CONTAINER:
-                candidates = [Path('/sys/fs/cgroup/system.slice/docker-' + OWN_CONTAINER + '.scope'), Path('/sys/fs/cgroup/docker') / OWN_CONTAINER]
-                groups = [g for g in candidates if (g/'memory.stat').is_file()]
-                assert groups or time.monotonic()-clock < 15, 'MISSING_CONTAINER_CGROUP'
-                for group in groups:
-                    values = dict(line.split() for line in (group/'memory.stat').read_text().splitlines())
-                    assert int(values['anon']) < 15*GIB//2, 'CONTAINER_ANON_PRESSURE'
-                    events = dict(line.split() for line in (group/'memory.events').read_text().splitlines())
-                    assert int(events.get('oom_kill', 0)) == 0, 'CONTAINER_OOM'
+            if OWN_CONTAINER and time.monotonic()-LAST_MEMORY_SAMPLE >= 10:
+                LAST_MEMORY_SAMPLE = time.monotonic()
+                try:
+                    observed = subprocess.run(['docker','stats','--no-stream','--format','{{json .}}', OWN_CONTAINER], capture_output=True, timeout=5, check=True, env=child_env)
+                    assert len(observed.stdout) < 8192 and len(observed.stderr) < 8192, 'MONITOR_OUTPUT_CAP'
+                    state_read = subprocess.run(['docker','inspect','--format','{{json .State}}', OWN_CONTAINER], capture_output=True, timeout=5, check=True, env=child_env)
+                    assert len(state_read.stdout) < 8192, 'MONITOR_STATE_CAP'
+                    state = json.loads(state_read.stdout)
+                    assert not state['OOMKilled'], 'CONTAINER_OOM'
+                    if state['Running']:
+                        sample = json.loads(observed.stdout)
+                        value = sample['MemPerc']
+                        assert re.fullmatch(r'[0-9]+(?:\.[0-9]+)?%', value), 'MONITOR_FAILED_MEMORY_FORMAT'
+                        assert float(value[:-1]) < 93.75, 'CONTAINER_WORKING_SET_PRESSURE'
+                except (subprocess.SubprocessError, OSError, ValueError) as monitor_error:
+                    raise RuntimeError('MONITOR_FAILED_' + type(monitor_error).__name__) from None
+                with (P/'memory-samples.jsonl').open('a') as record:
+                    record.write(json.dumps({'at_seconds':time.monotonic()-START,'stats':observed.stdout.decode().strip(),'oom_killed':state['OOMKilled'],'running':state['Running']})+'\n')
 
             for key, _ in selector.select(1):
                 data = os.read(key.fd, 65536)

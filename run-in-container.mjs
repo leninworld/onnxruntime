@@ -46,10 +46,10 @@ function service(name,args,cwd) {
   const proc=spawn(args[0],args.slice(1),{cwd,env,stdio:['ignore',fd,fd],detached:true});
   proc.on('error',e=>{proc.serviceError=e;});owned.push({proc,fd});return proc;
 }
-async function fixture(lane,bundle,wasm) {
+async function fixture(lane,bundle) {
   const dir=path.join(P,'fixture-'+lane);fs.mkdirSync(dir);
   fs.symlinkSync(P+'/fixture/node_modules',dir+'/node_modules','dir');fs.copyFileSync(P+'/fixture/package.json',dir+'/package.json',fs.constants.COPYFILE_EXCL);
-  await run(lane+'-prepare',['node',P+'/prepare-fixture.mjs',dir,S+'/js/web/test/e2e/model.onnx',wasm,...(bundle?[bundle]:[])],S,30);
+  await run(lane+'-prepare',['node',P+'/prepare-fixture.mjs',dir,S+'/js/web/test/e2e/model.onnx',...(bundle?[bundle]:[])],S,30);
   await run(lane+'-vite-build',['node',dir+'/node_modules/vite/bin/vite.js','build'],dir,300);
   const prod=service(lane+'-prod-server',['node',dir+'/node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173','--strictPort'],dir);
   const dev=service(lane+'-dev-server',['node',dir+'/node_modules/vite/bin/vite.js'],dir);
@@ -82,17 +82,17 @@ try {
   await run('baseline-web-types',['node','../node_modules/typescript/bin/tsc','-p','.','--noEmit'],S+'/js/web',180);
   await run('baseline-web-worker-types',['node','../node_modules/typescript/bin/tsc','-p','lib/wasm/proxy-worker','--noEmit'],S+'/js/web',180);
   await run('baseline-production-build',['node','./script/build'],S+'/js/web',900);
-  await fixture('reporter',null,P+'/fixture/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm');
-  await fixture('base',S+'/js/web/dist/ort.bundle.min.mjs',S+'/js/web/dist/ort-wasm-simd-threaded.wasm');
+  await fixture('reporter',null);
+  await fixture('base',S+'/js/web/dist/ort.bundle.min.mjs');
   fs.copyFileSync(P+'/candidate-loader.ts',loader);
   await run('candidate-web-prebuild',['npm','run','prebuild'],S+'/js/web',300);
   await run('candidate-root-lint',['npm','run','lint'],S+'/js',300);
-  const sourceHashes=()=>Object.fromEntries(fs.readdirSync(S+'/js',{recursive:true,withFileTypes:true}).filter(x=>x.isFile() && /\.(jsonc?|[cm]?js|[cm]?ts|md)$/.test(x.name) && !/(?:^|\/)node_modules\//.test(path.relative(S+'/js',path.join(x.parentPath,x.name)))).map(x=>{const file=path.join(x.parentPath,x.name);return [path.relative(S+'/js',file),sha(fs.readFileSync(file))];}));
+  const sourceHashes=()=>Object.fromEntries(['js','docs'].flatMap(root=>fs.readdirSync(path.join(S,root),{recursive:true,withFileTypes:true})).filter(x=>x.isFile() && /\.(jsonc?|[cm]?js|[cm]?ts|md)$/.test(x.name) && !/(?:^|\/)node_modules\//.test(path.relative(S+'/js',path.join(x.parentPath,x.name)))).map(x=>{const file=path.join(x.parentPath,x.name);return [path.relative(S+'/js',file),sha(fs.readFileSync(file))];}));
   const beforeFormat=sourceHashes();await run('candidate-format',['npm','run','format'],S+'/js',300);assert.deepEqual(sourceHashes(),beforeFormat,'FORMAT_CHANGED_SOURCE');
   await run('common-typedoc',['npx','--no-install','typedoc','--emit','none','--treatWarningsAsErrors'],S+'/js/common',180);
   const beforeDocs=sourceHashes();await run('web-generate-docs',['npm','run','build:doc'],S+'/js/web',180);assert.deepEqual(sourceHashes(),beforeDocs,'GENERATED_DOCS_CHANGED');
   await run('candidate-production-build',['npm','run','build'],S+'/js/web',900);
-  await fixture('candidate',S+'/js/web/dist/ort.bundle.min.mjs',S+'/js/web/dist/ort-wasm-simd-threaded.wasm');
+  await fixture('candidate',S+'/js/web/dist/ort.bundle.min.mjs');
   await run('materialize-real-test-cache',['node',P+'/materialize-test-cache.cjs',S,P],S,600);
   await run('package-consumption-controls',['node',P+'/package-controls.mjs',S,P],S,1500);
   await run('full-wasm-default-suite',['npm','test','--','-e=chrome','-b=wasm'],S+'/js/web',1800);
