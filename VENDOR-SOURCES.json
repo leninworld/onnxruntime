@@ -1,0 +1,18 @@
+{
+  "purpose": "Isolated validation of microsoft/onnxruntime issue33735; not a product contribution PR or official release.",
+  "source_base": "f5ff8ca8f1ff21141d4621b182b5750ea1e3a63a",
+  "upstream_input_relay": "cf0093ce4e335264b212111ee0093fd46150e475",
+  "seccomp": {
+    "repository": "microsoft/playwright",
+    "tag": "v1.56.1",
+    "path": "utils/docker/seccomp_profile.json",
+    "git_blob_sha1": "fddc05fb520affb145404e6f6f647ca96af8087d",
+    "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+    "bytes": 12997,
+    "official_guidance": "https://playwright.dev/docs/docker",
+    "purpose": "Enable non-root Chromium user-namespace sandbox in one credential-free isolated hosted validation container; no host or account setting change, no sandbox disable, no privileged mode or extra capabilities.",
+    "defaultAction": "SCMP_ACT_ERRNO"
+  },
+  "license": "Verbatim Playwright v1.56.1 license in PLAYWRIGHT-LICENSE; profile copied without modification.",
+  "scope": "Only synthetic/public tests; no private credentials or Mac files."
+}

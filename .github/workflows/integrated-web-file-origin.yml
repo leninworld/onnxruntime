@@ -1,0 +1,51 @@
+name: Web file-origin integrated validation
+on:
+  push:
+    branches: [validate-web-file-origin-33735]
+    paths: ['.github/workflows/integrated-web-file-origin.yml', '*.py', '*.mjs', '*.cjs', '*.json', '*.patch']
+permissions:
+  contents: read
+concurrency:
+  group: validate-web-file-origin-33735
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 155
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/onnxruntime
+          ref: f5ff8ca8f1ff21141d4621b182b5750ea1e3a63a
+          path: source
+          persist-credentials: false
+          sparse-checkout: |
+            js
+            .github
+            docs
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.22.1'
+          package-manager-cache: false
+      - name: Price, admit and validate the complete fix once
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=15s 9000s python3 integrated.py
+      - name: Preserve bounded failure evidence in the job log
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for pattern in ('integrated-result.json', 'execution-result.json', '*browser-result.json', 'package-control-result.json', 'remote-command-*.log'):
+              for p in sorted(Path('.').glob(pattern)):
+                  data=p.read_bytes()
+                  print(p.name, 'bytes=', len(data))
+                  print(data[-16384:].decode(errors='replace'))
+          PY

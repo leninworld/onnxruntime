@@ -1,0 +1,8 @@
+{
+  "patch_sha256": "bbf212e36d996b5eddfaf49084a15ab7492b55ef463c68b4b01857e701cd0832",
+  "files": {
+    "js/web/lib/wasm/wasm-utils-import.ts": "a5de2265704469ddb81598d3e40081e3538b4c31862dd1bee03510c0d5f2ed85",
+    "js/web/script/test-wasm-utils-import.ts": "b85fb79e6c6df0b52ae978fb2e99e30ed9ac8bc047d69c27a8510777b2e7d043",
+    "js/web/package.json": "d6a67a6ad0baff39f444639708eedb2b5e15b1b4f6192250105c4caa3a781898"
+  }
+}
