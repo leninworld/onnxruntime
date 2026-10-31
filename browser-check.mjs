@@ -10,6 +10,7 @@ assert(['reporter','base','candidate'].includes(lane));
 assert(!fs.existsSync(outputPath));
 const require = createRequire(path.join(path.resolve(fixtureDir), 'package.json'));
 const {firefox,chromium} = require('playwright');
+const sanitize = value => value.replace(/([?&](?:token|access_token|key)=)[^&\s]*/gi,'$1[REDACTED]');
 const expected=[700,800,900,1580,1840,2100,2460,2880,3300];
 const observations=[];
 let failed=false;
@@ -24,12 +25,12 @@ try {
       ]) {
         const context=await browser.newContext();
         const page=await context.newPage();
-        const errors=[]; const consoleErrors=[]; const requests=[];
+        const errors=[]; const consoleErrors=[]; const requests=[]; const rawRequests=[];
         let observedPageError;
         const pageErrorEvent=new Promise(resolve=>{observedPageError=resolve;});
         page.on('pageerror',e=>{errors.push(String(e));observedPageError();});
         page.on('console',m=>{if(m.type()==='error') consoleErrors.push(m.text());});
-        page.on('request',r=>requests.push(r.url()));
+        page.on('request',r=>{rawRequests.push(r.url());requests.push(sanitize(r.url()));});
         const observation={lane,browser:name,version:browser.version(),scheme,url,errors,consoleErrors,requests};
         try {
           await page.goto(url,{waitUntil:'load',timeout:30000});
@@ -48,7 +49,7 @@ try {
             assert.deepEqual(observation.result.data,expected);
             assert.equal(errors.length,0,'Unexpected page errors');
           }
-          if(scheme==='file') assert(!requests.some(u=>/^https?:/.test(u)),'Local-file fixture attempted network requests');
+          if(scheme==='file') assert(!rawRequests.some(u=>/^https?:/.test(u)),'Local-file fixture attempted network requests');
           observation.verified=true;
         } catch(error) {
           observation.verified=false;observation.failure=String(error);failed=true;

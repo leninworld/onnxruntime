@@ -87,10 +87,19 @@ try {
   fs.copyFileSync(P+'/candidate-loader.ts',loader);
   await run('candidate-web-prebuild',['npm','run','prebuild'],S+'/js/web',300);
   await run('candidate-root-lint',['npm','run','lint'],S+'/js',300);
-  const sourceHashes=()=>Object.fromEntries(['js','docs'].flatMap(root=>fs.readdirSync(path.join(S,root),{recursive:true,withFileTypes:true})).filter(x=>x.isFile() && /\.(jsonc?|[cm]?js|[cm]?ts|md)$/.test(x.name) && !/(?:^|\/)node_modules\//.test(path.relative(S+'/js',path.join(x.parentPath,x.name)))).map(x=>{const file=path.join(x.parentPath,x.name);return [path.relative(S+'/js',file),sha(fs.readFileSync(file))];}));
-  const beforeFormat=sourceHashes();await run('candidate-format',['npm','run','format'],S+'/js',300);assert.deepEqual(sourceHashes(),beforeFormat,'FORMAT_CHANGED_SOURCE');
+  const tracked=JSON.parse(fs.readFileSync(P+'/tracked-check-files.json'));
+  assert(tracked.includes('js/web/script/test-wasm-utils-import.ts'),'NEW_REGRESSION_MUST_BE_PROTECTED');
+  const sourceHashes=()=>Object.fromEntries(tracked.map(name=>[name,fs.existsSync(path.join(S,name))?sha(fs.readFileSync(path.join(S,name))):null]));
+  const checkHashes=(name,before,after)=>{
+    const changed=tracked.filter(file=>before[file]!==after[file]).map(file=>({path:file,before:before[file],after:after[file]}));
+    const report={manifestPathCount:tracked.length,manifestSha256:sha(fs.readFileSync(P+'/tracked-check-files.json')),status:changed.length?'FAIL':'PASS',changed};
+    const text=JSON.stringify(report,null,2);assert(Buffer.byteLength(text)<=1048576,'CHECK_REPORT_CAP');
+    fs.writeFileSync(P+'/'+name+'-check-result.json',text,{flag:'wx'});
+    assert.equal(changed.length,0,name.toUpperCase()+'_CHANGED_TRACKED_SOURCE');
+  };
+  const beforeFormat=sourceHashes();await run('candidate-format',['npm','run','format'],S+'/js',300);checkHashes('format',beforeFormat,sourceHashes());
   await run('common-typedoc',['npx','--no-install','typedoc','--emit','none','--treatWarningsAsErrors'],S+'/js/common',180);
-  const beforeDocs=sourceHashes();await run('web-generate-docs',['npm','run','build:doc'],S+'/js/web',180);assert.deepEqual(sourceHashes(),beforeDocs,'GENERATED_DOCS_CHANGED');
+  const beforeDocs=sourceHashes();await run('web-generate-docs',['npm','run','build:doc'],S+'/js/web',180);checkHashes('docs',beforeDocs,sourceHashes());
   await run('candidate-production-build',['npm','run','build'],S+'/js/web',900);
   await fixture('candidate',S+'/js/web/dist/ort.bundle.min.mjs');
   await run('materialize-real-test-cache',['node',P+'/materialize-test-cache.cjs',S,P],S,600);

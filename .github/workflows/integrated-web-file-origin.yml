@@ -43,10 +43,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          for pattern in ('integrated-result.json', 'execution-result.json', '*browser-result.json', 'package-control-result.json', 'memory-samples.jsonl', 'fixture-*/input-identities.json', 'remote-command-*.log'):
+          for pattern in ('integrated-result.json', 'execution-result.json', '*browser-result.json', 'package-control-result.json', 'memory-samples.jsonl', '*-check-result.json', 'fixture-*/input-identities.json', 'remote-command-*.log'):
               for p in sorted(Path('.').glob(pattern)):
                   data=p.read_bytes()
                   print(p.name, 'bytes=', len(data))
-                  assert len(data) <= 1048576 or p.name != 'memory-samples.jsonl'
-                  print((data if p.name == 'memory-samples.jsonl' else data[-16384:]).decode(errors='replace'))
+                  assert len(data) <= 1048576 or not (p.name == 'memory-samples.jsonl' or p.name.endswith('-check-result.json'))
+                  print((data if p.name == 'memory-samples.jsonl' or p.name.endswith('-check-result.json') else data[-16384:]).decode(errors='replace'))
           PY

@@ -22,5 +22,6 @@
     "Parcel",
     "stockFirefox"
   ],
-  "rules": "Ifpairingfailsparkandstaticreadpublishedpackage; ifpairingpassesbutreporterHTTPfails, no thirdrunwithoutsource-proven cause; ifdevfailsHTTPpasses inspectdocumentedoptimizeDeps guidance, no silentconfigchange"
+  "rules": "Ifpairingfailsparkandstaticreadpublishedpackage; ifpairingpassesbutreporterHTTPfails, no thirdrunwithoutsource-proven cause; ifdevfailsHTTPpasses inspectdocumentedoptimizeDeps guidance, no silentconfigchange",
+  "format_identity_scope": "Every git-tracked js/ and docs/ file plus every reviewed patch path, including the newly added regression test; manifest frozen by host Git after patch application, byte hashes compared in container. Generated untracked JavaScript is excluded just as upstream git diff does."
 }

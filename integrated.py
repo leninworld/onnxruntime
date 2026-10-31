@@ -164,6 +164,10 @@ try:
         with (P/(name+'-loader.ts')).open('xb') as f:
             f.write(data)
     (P/'frozen-loaders.json').write_text(json.dumps({'baseline':hashlib.sha256(baseline_loader).hexdigest(), 'candidate':hashlib.sha256(candidate_loader).hexdigest()}))
+    tracked = command(['git','-C',str(source),'ls-files','-z','--','js','docs'], 10).decode().split('\0')
+    tracked = sorted(set(p for p in tracked if p) | set(expected['files']))
+    assert len(tracked) < 50000 and all(p.startswith(('js/','docs/')) and '..' not in PurePosixPath(p).parts for p in tracked)
+    (P/'tracked-check-files.json').write_text(json.dumps(tracked))
 
     # The dist directory must be new: no artifact overwrites or generated-bundle patching.
     verified_zip(P/'Release_wasm.zip', 'f2469ee4f02eef820f57e7779f2143d167412785fbcf125a5c47717bbe005ffe', source/'js/web/dist')
